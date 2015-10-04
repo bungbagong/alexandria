@@ -4,12 +4,15 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,6 +22,17 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
 
 import it.jaschke.alexandria.data.AlexandriaContract;
 import it.jaschke.alexandria.services.BookService;
@@ -36,6 +50,10 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
 
     private String mScanFormat = "Format:";
     private String mScanContents = "Contents:";
+
+    private final String LOG_TAG = AddBook.class.getSimpleName();
+
+    public BookResult bookResult;
 
 
 
@@ -79,11 +97,20 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
                     return;
                 }
                 //Once we have an ISBN, start a book intent
+
+                /*
                 Intent bookIntent = new Intent(getActivity(), BookService.class);
                 bookIntent.putExtra(BookService.EAN, ean);
                 bookIntent.setAction(BookService.FETCH_BOOK);
                 getActivity().startService(bookIntent);
                 AddBook.this.restartLoader();
+                */
+
+                AddBookQuery bookQuery = new AddBookQuery();
+                bookQuery.execute(ean);
+
+
+
             }
         });
 
@@ -161,6 +188,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
             return;
         }
 
+        /*
         String bookTitle = data.getString(data.getColumnIndex(AlexandriaContract.BookEntry.TITLE));
         ((TextView) rootView.findViewById(R.id.bookTitle)).setText(bookTitle);
 
@@ -182,6 +210,8 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
 
         rootView.findViewById(R.id.save_button).setVisibility(View.VISIBLE);
         rootView.findViewById(R.id.delete_button).setVisibility(View.VISIBLE);
+
+        */
     }
 
     @Override
@@ -204,4 +234,203 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
         super.onAttach(activity);
         activity.setTitle(R.string.scan);
     }
+
+
+    public class AddBookQuery extends AsyncTask<String, Void, BookResult>{
+
+
+        ArrayList<String> bookAuthors = new ArrayList<String>();
+        ArrayList<String> bookCategories = new ArrayList<String>();
+
+
+        @Override
+        protected void onPostExecute(BookResult bookResult) {
+
+            if(bookResult == null ) {
+                Toast.makeText
+                        (getActivity(),"NO result !!!!",
+                                Toast.LENGTH_LONG).show();
+
+            }
+            else {
+
+                String bookTitle = bookResult.getTitle();
+                ((TextView) rootView.findViewById(R.id.bookTitle)).setText(bookTitle);
+
+                String bookSubTitle = bookResult.getSubtitle();
+                ((TextView) rootView.findViewById(R.id.bookSubTitle)).setText(bookSubTitle);
+
+
+                ArrayList<String> authorArray = bookResult.getAuthors();
+                String authors="";
+                for(String i :authorArray){
+                    authors+=i;
+                    authors+=",";
+                }
+
+                ((TextView) rootView.findViewById(R.id.authors)).setLines(authorArray.size());
+                ((TextView) rootView.findViewById(R.id.authors)).setText(authors.replace(",","\n"));
+
+
+                String imgUrl = bookResult.getImgUrl();
+                if(Patterns.WEB_URL.matcher(imgUrl).matches()){
+                    new DownloadImage((ImageView) rootView.findViewById(R.id.bookCover)).execute(imgUrl);
+                    rootView.findViewById(R.id.bookCover).setVisibility(View.VISIBLE);
+                }
+
+
+                ArrayList<String> categoryArray = bookResult.getCategories();
+
+                ((TextView) rootView.findViewById(R.id.categories)).setText(categoryArray.toString());
+
+                rootView.findViewById(R.id.save_button).setVisibility(View.VISIBLE);
+                rootView.findViewById(R.id.delete_button).setVisibility(View.VISIBLE);
+
+
+            }
+        }
+
+        @Override
+        protected BookResult doInBackground(String... params) {
+
+            HttpURLConnection urlConnection = null;
+            BufferedReader reader = null;
+            String bookJsonString = null;
+
+            try {
+                final String FORECAST_BASE_URL = "https://www.googleapis.com/books/v1/volumes?";
+                final String QUERY_PARAM = "q";
+
+                final String ISBN_PARAM = "isbn:" + params[0];
+
+                Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon()
+                        .appendQueryParameter(QUERY_PARAM, ISBN_PARAM)
+                        .build();
+
+                URL url = new URL(builtUri.toString());
+
+                urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setRequestMethod("GET");
+                urlConnection.connect();
+
+                InputStream inputStream = urlConnection.getInputStream();
+                StringBuffer buffer = new StringBuffer();
+                if (inputStream == null) {
+                    return null;
+                }
+
+                reader = new BufferedReader(new InputStreamReader(inputStream));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line);
+                    buffer.append("\n");
+                }
+
+                if (buffer.length() == 0) {
+                    return null;
+                }
+                bookJsonString = buffer.toString();
+            } catch (Exception e) {
+                Log.e(LOG_TAG, "Error ", e);
+            } finally {
+                if (urlConnection != null) {
+                    urlConnection.disconnect();
+                }
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (final IOException e) {
+                        Log.e(LOG_TAG, "Error closing stream", e);
+                    }
+                }
+
+            }
+
+            final String ITEMS = "items";
+
+            final String VOLUME_INFO = "volumeInfo";
+
+            final String TITLE = "title";
+            final String SUBTITLE = "subtitle";
+            final String AUTHORS = "authors";
+            final String DESC = "description";
+            final String CATEGORIES = "categories";
+            final String IMG_URL_PATH = "imageLinks";
+            final String IMG_URL = "thumbnail";
+
+            try {
+                JSONObject bookJson = new JSONObject(bookJsonString);
+                JSONArray bookArray;
+                if(bookJson.has(ITEMS)){
+                    bookArray = bookJson.getJSONArray(ITEMS);
+                }else{
+                    //Intent messageIntent = new Intent(MainActivity.MESSAGE_EVENT);
+                    //messageIntent.putExtra(MainActivity.MESSAGE_KEY,getResources().getString(R.string.not_found));
+                    //LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(messageIntent);
+                    return null;
+                }
+
+                JSONObject bookInfo = ((JSONObject) bookArray.get(0)).getJSONObject(VOLUME_INFO);
+
+                String title = bookInfo.getString(TITLE);
+
+                String subtitle = "";
+                if(bookInfo.has(SUBTITLE)) {
+                    subtitle = bookInfo.getString(SUBTITLE);
+                }
+
+                String desc="";
+                if(bookInfo.has(DESC)){
+                    desc = bookInfo.getString(DESC);
+                }
+
+                String imgUrl = "";
+                if(bookInfo.has(IMG_URL_PATH) && bookInfo.getJSONObject(IMG_URL_PATH).has(IMG_URL)) {
+                    imgUrl = bookInfo.getJSONObject(IMG_URL_PATH).getString(IMG_URL);
+                }
+
+
+
+
+
+                if(bookInfo.has(AUTHORS)) {
+
+                    JSONArray jsonArray = bookInfo.getJSONArray(AUTHORS);
+
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        bookAuthors.add(jsonArray.getString(i));
+                    }
+                }
+
+                if(bookInfo.has(CATEGORIES)) {
+
+                    JSONArray jsonArray = bookInfo.getJSONArray(CATEGORIES);
+
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        bookCategories.add(jsonArray.getString(i));
+                    }
+                }
+
+                bookResult = new BookResult(title,subtitle,desc,imgUrl,bookAuthors,bookCategories);
+
+                Log.d("bungbagong",bookResult.toString());
+
+
+                } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error ", e);
+            }
+
+
+
+
+
+
+            return bookResult;
+        }
+
+
+    }
+
+
+
 }
