@@ -248,7 +248,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
 
             if(bookResult == null ) {
                 Toast.makeText
-                        (getActivity(),"NO result !!!!",
+                        (getActivity(),"No book with this ISBN number can be found",
                                 Toast.LENGTH_LONG).show();
 
             }
@@ -280,8 +280,16 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
 
 
                 ArrayList<String> categoryArray = bookResult.getCategories();
+                String categories ="";
+                for(String i: categoryArray){
+                    categories+=i;
+                    categories+=", ";
+                }
 
-                ((TextView) rootView.findViewById(R.id.categories)).setText(categoryArray.toString());
+                ((TextView) rootView.findViewById(R.id.categories)).setLines(categoryArray.size());
+                ((TextView) rootView.findViewById(R.id.categories)).setText(categories.replace(",","\n"));
+
+
 
                 rootView.findViewById(R.id.save_button).setVisibility(View.VISIBLE);
                 rootView.findViewById(R.id.delete_button).setVisibility(View.VISIBLE);
