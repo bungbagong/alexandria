@@ -42,6 +42,7 @@ import it.jaschke.alexandria.services.DownloadImage;
 public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
     private static final String TAG = "INTENT_TO_SCAN_ACTIVITY";
     private EditText ean;
+    private String eanString;
     private final int LOADER_ID = 1;
     private View rootView;
     private final String EAN_CONTENT="eanContent";
@@ -108,6 +109,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
 
                 AddBookQuery bookQuery = new AddBookQuery();
                 bookQuery.execute(ean);
+                eanString=ean;
 
 
 
@@ -136,7 +138,11 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
         rootView.findViewById(R.id.save_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                ean.setText("");
+                Intent bookIntent = new Intent(getActivity(), BookService.class);
+                bookIntent.putExtra(BookService.EAN, eanString);
+                bookIntent.setAction(BookService.FETCH_BOOK);
+                getActivity().startService(bookIntent);
+                AddBook.this.restartLoader();
             }
         });
 
@@ -187,6 +193,10 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
         if (!data.moveToFirst()) {
             return;
         }
+
+        Toast.makeText
+                (getActivity(),"The book was successfully added",
+                        Toast.LENGTH_LONG).show();
 
         /*
         String bookTitle = data.getString(data.getColumnIndex(AlexandriaContract.BookEntry.TITLE));
@@ -419,7 +429,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
                     }
                 }
 
-                bookResult = new BookResult(title,subtitle,desc,imgUrl,bookAuthors,bookCategories);
+                bookResult = new BookResult(title,subtitle,desc,imgUrl,bookCategories, bookAuthors);
 
                 Log.d("bungbagong",bookResult.toString());
 
