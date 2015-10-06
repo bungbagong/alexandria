@@ -205,6 +205,11 @@ public class BookService extends IntentService {
         } catch (JSONException e) {
             Log.e(LOG_TAG, "Error ", e);
         }
+
+        Intent messageIntent = new Intent(MainActivity.MESSAGE_EVENT);
+        messageIntent.putExtra(MainActivity.MESSAGE_KEY,"The book has successfully added");
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(messageIntent);
+
     }
 
     private void writeBackBook(String ean, String title, String subtitle, String desc, String imgUrl) {

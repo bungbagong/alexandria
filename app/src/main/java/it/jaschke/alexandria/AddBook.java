@@ -132,6 +132,9 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
                 Toast toast = Toast.makeText(context, text, duration);
                 toast.show();
 
+                Intent scanIntent = new Intent(getActivity(), SimpleZBar.class);
+                getActivity().startActivity(scanIntent);
+
             }
         });
 
@@ -194,9 +197,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
             return;
         }
 
-        Toast.makeText
-                (getActivity(),"The book was successfully added",
-                        Toast.LENGTH_LONG).show();
+
 
         /*
         String bookTitle = data.getString(data.getColumnIndex(AlexandriaContract.BookEntry.TITLE));
