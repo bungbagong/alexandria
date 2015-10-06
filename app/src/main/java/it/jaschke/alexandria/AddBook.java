@@ -55,7 +55,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
     private final String LOG_TAG = AddBook.class.getSimpleName();
 
     public BookResult bookResult;
-
+    static final int SCAN_RESULT= 12;
 
 
     public AddBook(){
@@ -67,6 +67,19 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
         if(ean!=null) {
             outState.putString(EAN_CONTENT, ean.getText().toString());
         }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+
+            if(resultCode == Activity.RESULT_OK){
+
+                ean.setText(data.getStringExtra("scanResult"));
+            }
+            if (resultCode == Activity.RESULT_CANCELED) {
+
+            }
+
     }
 
     @Override
@@ -132,8 +145,8 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
                 Toast toast = Toast.makeText(context, text, duration);
                 toast.show();
 
-                Intent scanIntent = new Intent(getActivity(), SimpleZBar.class);
-                getActivity().startActivity(scanIntent);
+                Intent scanIntent = new Intent(getActivity(), SimpleZBarActivity.class);
+                startActivityForResult(scanIntent, SCAN_RESULT);
 
             }
         });
