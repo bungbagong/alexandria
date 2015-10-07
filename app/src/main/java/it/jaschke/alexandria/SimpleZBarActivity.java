@@ -52,7 +52,8 @@ public class SimpleZBarActivity extends Activity implements ZBarScannerView.Resu
 
         Intent returnIntent = new Intent();
         returnIntent.putExtra("scanResult", result);
-        setResult(Activity.RESULT_OK,returnIntent);
+        setResult(Activity.RESULT_OK, returnIntent);
+        //Log.d("bungbagong zbar", "intent scan=" + result);
         this.finish();
     }
 }
