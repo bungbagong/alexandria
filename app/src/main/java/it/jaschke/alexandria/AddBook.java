@@ -1,8 +1,11 @@
 package it.jaschke.alexandria;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -68,6 +71,13 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
         }
     }
 
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager
+                = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
 
@@ -119,9 +129,20 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
                 AddBook.this.restartLoader();
                 */
 
-                AddBookQuery bookQuery = new AddBookQuery();
-                bookQuery.execute(ean);
-                eanString=ean;
+                if(isNetworkAvailable()) {
+                    AddBookQuery bookQuery = new AddBookQuery();
+                    bookQuery.execute(ean);
+                    eanString = ean;
+                } else {
+                    Context context = getActivity();
+                    CharSequence text = "Please check your internet connection or try again later.";
+                    int duration = Toast.LENGTH_SHORT;
+                    Toast toast = Toast.makeText(context, text, duration);
+                    toast.show();
+                }
+
+
+
 
 
 
