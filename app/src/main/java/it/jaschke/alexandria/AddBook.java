@@ -466,7 +466,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
 
                 bookResult = new BookResult(title,subtitle,desc,imgUrl,bookCategories, bookAuthors);
 
-                Log.d("bungbagong",bookResult.toString());
+                //Log.d("bungbagong",bookResult.toString());
 
 
                 } catch (JSONException e) {
